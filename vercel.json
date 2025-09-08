@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd pet-consultation && npm run build",
+  "outputDirectory": "pet-consultation/dist",
+  "installCommand": "cd pet-consultation && npm install",
+  "devCommand": "cd pet-consultation && npm run dev",
+  "framework": null
+}
