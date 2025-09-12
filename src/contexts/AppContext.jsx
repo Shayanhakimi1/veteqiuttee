@@ -18,6 +18,7 @@ export const AppProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
   const [consultationData, setConsultationData] = useState(null);
+  const [paymentData, setPaymentData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -43,6 +44,11 @@ export const AppProvider = ({ children }) => {
       }
       if (savedConsultationData) {
         setConsultationData(JSON.parse(savedConsultationData));
+      }
+
+      const savedPaymentData = localStorage.getItem('paymentData');
+      if (savedPaymentData) {
+        setPaymentData(JSON.parse(savedPaymentData));
       }
     } catch (error) {
       console.error('خطا در بارگذاری داده‌ها از localStorage:', error);
@@ -79,6 +85,16 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // ذخیره اطلاعات پرداخت
+  const savePaymentData = (data) => {
+    try {
+      setPaymentData(data);
+      localStorage.setItem('paymentData', JSON.stringify(data));
+    } catch (error) {
+      console.error('خطا در ذخیره اطلاعات پرداخت:', error);
+    }
+  };
+
   // پاک کردن تمام داده‌ها
   const clearAllData = () => {
     try {
@@ -111,6 +127,7 @@ export const AppProvider = ({ children }) => {
     userData,
     selectedPet,
     consultationData,
+    paymentData,
     isLoading,
     isLoggedIn,
     
@@ -118,6 +135,7 @@ export const AppProvider = ({ children }) => {
     saveUserData,
     savePetSelection,
     saveConsultationData,
+    savePaymentData,
     clearAllData,
     generateTrackingCode,
     checkIsLoggedIn,

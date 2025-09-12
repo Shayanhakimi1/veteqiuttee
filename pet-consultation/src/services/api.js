@@ -1,6 +1,7 @@
 import { translateError, translateValidationErrors } from '../utils/errorTranslations';
+import { logger } from '../utils/logger';
 
-const API_BASE_URL = "http://localhost:3002/api";
+const API_BASE_URL = "http://localhost:3003/api";
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -9,6 +10,7 @@ const getAuthToken = () => {
 
 // Helper function to make API requests
 const apiRequest = async (endpoint, options = {}) => {
+  const startTime = Date.now();
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
 
@@ -44,9 +46,10 @@ const apiRequest = async (endpoint, options = {}) => {
       throw new Error(errorMessage);
     }
 
+    logger.api(endpoint, Date.now() - startTime, response.status);
     return data;
   } catch (error) {
-    console.error("API Request Error:", error);
+    logger.error('API Request Error', { error, endpoint });
 
     // بررسی نوع خطا و ارائه پیام مناسب
     if (

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import { useApp } from '../contexts/AppContext';
+import Button from '../components/common/Button';
+import { logger } from '../utils/logger';
 import { CheckCircle, Clock, Calendar } from 'lucide-react';
 
 const FinalConfirmation = () => {
@@ -22,7 +24,7 @@ const FinalConfirmation = () => {
       try {
         setConsultationData(JSON.parse(savedData));
       } catch (error) {
-        console.error('خطا در بارگذاری اطلاعات مشاوره:', error);
+        logger.error('Failed to load consultation information', { error });
       }
     }
 

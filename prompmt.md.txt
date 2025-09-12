@@ -1,0 +1,46 @@
+شن مشاوره تلفنی حیوانات را از PostgreSQL به SQL Server مهاجرت داده‌ام و اکنون با خطا در ثبت‌نام مواجهم. لطفاً کل پروژه را دیباگ کن و تغییرات لازم را اعمال کن.
+
+## Stack فنی:
+- Frontend: React + Tailwind CSS
+- Backend: Node.js + Express.js  
+- Database: SQL Server (مهاجرت شده از PostgreSQL)
+- خطای فعلی: ثبت‌نام کاربران کار نمی‌کند
+
+## فایل‌های پروژه که نیاز به بررسی دارند:
+
+### Backend Files:
+[کل محتوای package.json]
+[کل محتوای server.js یا app.js]
+[کل محتوای config/database.js]
+[کل محتوای models/User.js]
+[کل محتوای routes/auth.js]
+[کل محتوای .env]
+
+### Frontend Files:
+[کل محتوای package.json]
+[کل محتوای src/services/api.js یا axios config]
+[کل محتوای src/components/RegisterForm.jsx]
+[کل محتوای .env یا .env.local]
+
+### Database Schema:
+[ساختار فعلی جدول Users در SQL Server]
+
+## درخواست‌های من:
+
+### 1. PACKAGE MANAGEMENT - دستورات کامل نصب و حذف:
+
+برای Backend:
+`bash
+# حذف پکیج‌های PostgreSQL
+npm uninstall pg pg-hstore sequelize-cli @types/pg
+
+# نصب پکیج‌های SQL Server
+npm install mssql tedious
+npm install dotenv cors express-validator bcryptjs jsonwebtoken
+npm install helmet morgan compression express-rate-limit
+npm install --save-dev nodemon
+
+# اگر از Sequelize استفاده می‌کنی
+npm uninstall sequelize
+npm install sequelize sequelize-typescript
+npm install tedious # Sequelize driver for SQL Server

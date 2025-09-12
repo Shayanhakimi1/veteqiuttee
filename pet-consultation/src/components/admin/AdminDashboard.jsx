@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { FaUsers, FaPaw, FaCreditCard, FaChartLine, FaSignOutAlt, FaUserShield, FaEye, FaEdit } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 import { adminAPI, authAPI } from '../../services/api';
+import { logger } from '../../utils/logger';
 // Removed duplicate admin guard: useAdminAuth is no longer needed here
 // import { useAdminAuth } from '../../hooks/useAuth';
 import InfoCard from '../common/InfoCard';
@@ -59,7 +60,7 @@ const AdminDashboard = () => {
       setStats(prev => ({ ...prev, totalConsultations: consultationsData.data.pagination.total || 0 }));
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Failed to fetch dashboard data', { error });
       toast.error(error.message || 'خطا در دریافت اطلاعات داشبورد');
       if (error.message.includes("احراز هویت")) {
         handleLogout(false);
@@ -120,8 +121,8 @@ const AdminDashboard = () => {
   ];
 
   const tableActions = [
-    { label: 'View', type: 'view', icon: <FaEye />, onClick: (row) => console.log('View:', row) },
-    { label: 'Edit', type: 'edit', icon: <FaEdit />, onClick: (row) => console.log('Edit:', row) },
+    { label: 'View', type: 'view', icon: <FaEye />, onClick: (row) => logger.userAction('View consultation', { consultationId: row.id }) },
+    { label: 'Edit', type: 'edit', icon: <FaEdit />, onClick: (row) => logger.userAction('Edit consultation', { consultationId: row.id }) },
   ];
 
   if (isLoading) {
@@ -189,7 +190,7 @@ const AdminDashboard = () => {
         {activeTab === 'payments' && (
           <div className="payments-section">
             <h2>مدیریت پرداخت‌ها</h2>
-            <DataTable columns={paymentColumns} data={payments} actions={[{ label: 'View', type: 'view', icon: <FaEye />, onClick: (row) => console.log('View:', row) }]} />
+            <DataTable columns={paymentColumns} data={payments} actions={[{ label: 'View', type: 'view', icon: <FaEye />, onClick: (row) => logger.userAction('View payment', { paymentId: row.id }) }]} />
           </div>
         )}
 

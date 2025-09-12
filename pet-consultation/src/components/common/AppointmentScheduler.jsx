@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 const AppointmentScheduler = ({ onAppointmentSelect, selectedDate, selectedTime }) => {
   const [currentDate, setCurrentDate] = useState(selectedDate || '');
@@ -53,7 +54,7 @@ const AppointmentScheduler = ({ onAppointmentSelect, selectedDate, selectedTime 
         setError('خطا در دریافت ساعت‌های موجود');
       }
     } catch (err) {
-      console.error('Error fetching available slots:', err);
+      logger.error('Failed to fetch available appointment slots', { error: err });
       setError('خطا در اتصال به سرور');
     } finally {
       setLoading(false);

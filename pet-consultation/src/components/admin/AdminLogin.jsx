@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { MdAdminPanelSettings } from 'react-icons/md';
+import { logger } from '../../utils/logger';
 import './AdminLogin.css';
 
 const AdminLogin = () => {
@@ -49,7 +50,7 @@ const AdminLogin = () => {
         toast.error(data.message || 'خطا در ورود');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Admin login failed', { error });
       toast.error('خطا در اتصال به سرور');
     } finally {
       setIsLoading(false);

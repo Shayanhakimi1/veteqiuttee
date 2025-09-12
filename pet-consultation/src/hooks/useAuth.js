@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from './useApp';
 import { authAPI } from '../services/api';
 import { translateError } from '../utils/errorTranslations';
+import { logger } from '../utils/logger';
 
 export const useAuth = () => {
   const { setUserData, loadUserProfile, clearRegistrationData } = useApp();
@@ -15,7 +16,7 @@ export const useAuth = () => {
       }
       return response;
     } catch (error) {
-      console.error('خطا در ورود:', error);
+      logger.error('User login failed', { error });
       const translatedError = new Error(translateError(error.message) || 'شماره موبایل یا رمز عبور اشتباه است');
       throw translatedError;
     }
@@ -29,20 +30,24 @@ export const useAuth = () => {
       }
       return { user: response.admin, token: response.token, isAdmin: true };
     } catch (error) {
-      console.error('خطا در ورود ادمین:', error);
+      logger.error('Admin login failed', { error });
       const translatedError = new Error(translateError(error.message) || 'شماره موبایل یا رمز عبور اشتباه است');
       throw translatedError;
     }
   };
 
-  const register = async (userData, petData) => {
+  const register = async (userData) => {
     try {
       const registrationData = {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
+        fullName: userData.fullName,
+        petName: userData.petName,
+        petBreed: userData.petBreed,
+        petAge: userData.petAge,
+        petGender: userData.petGender,
+        isNeutered: userData.isNeutered,
         mobile: userData.mobile,
         password: userData.password,
-        petData: petData
+        petType: userData.petType, // اضافه کردن نوع حیوان خانگی
       };
       
       const response = await authAPI.register(registrationData);
@@ -63,7 +68,7 @@ export const useAuth = () => {
       
       throw new Error('خطا در ثبت‌نام');
     } catch (error) {
-      console.error('خطا در ثبت‌نام کاربر:', error);
+      logger.error('User registration failed', { error });
       const translatedError = new Error(translateError(error.message) || 'خطا در ثبت‌نام کاربر');
       throw translatedError;
     }

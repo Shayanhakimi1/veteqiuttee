@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { logger } from '../../utils/logger';
 
 const VoiceRecorder = ({ onRecordingComplete, maxDuration = 300 }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -57,7 +58,7 @@ const VoiceRecorder = ({ onRecordingComplete, maxDuration = 300 }) => {
       }, 1000);
 
     } catch (error) {
-      console.error('خطا در دسترسی به میکروفون:', error);
+      logger.error('Microphone access failed', { error });
       alert('دسترسی به میکروفون امکان‌پذیر نیست. لطفاً مجوز دسترسی را بدهید.');
     }
   };

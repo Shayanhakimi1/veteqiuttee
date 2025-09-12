@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../hooks/useApp';
+import { useApp } from '../contexts/AppContext';
 import Button from '../components/common/Button';
 import ProgressBar from '../components/common/ProgressBar';
+import { logger } from '../utils/logger';
 import { FaDog, FaCat, FaDove } from 'react-icons/fa';
 
 // صفحه انتخاب نوع حیوان خانگی
@@ -21,7 +22,7 @@ const PetSelection = () => {
         const parsedSelection = JSON.parse(savedSelection);
         setSelectedPet(parsedSelection);
       } catch (error) {
-        console.error('خطا در بارگذاری انتخاب پت:', error);
+        logger.error('Failed to load pet selection data', { error });
       }
     }
   }, []);
@@ -66,7 +67,7 @@ const PetSelection = () => {
       };
       savePetSelection(petData);
     } catch (e) {
-      console.error('خطا در ذخیره انتخاب پت:', e);
+      logger.error('Failed to save pet selection', { error: e });
     }
   };
 

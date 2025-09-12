@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 // Removed unused useNavigate import
 // import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Clock, Phone } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const PaymentSuccess = () => {
   // const navigate = useNavigate(); // removed unused variable
@@ -38,7 +39,7 @@ const PaymentSuccess = () => {
       const data = localStorage.getItem('consultationData');
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error parsing consultation data:', error);
+      logger.error('Failed to parse consultation data', { error });
       return null;
     }
   };

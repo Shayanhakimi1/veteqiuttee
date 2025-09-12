@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3002/api';
+const API_BASE_URL = 'http://localhost:4000/api/v1';
 
 class ApiService {
   constructor() {
@@ -23,15 +23,47 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      
+      // Handle network errors or non-JSON responses
+      if (!response) {
+        throw new Error('Network error - no response received');
+      }
+      
+      // Try to parse JSON, but handle non-JSON responses gracefully
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          throw new Error(`Invalid JSON response from server: ${parseError.message}`);
+        }
+      } else {
+        // Handle non-JSON responses (like text/plain)
+        const text = await response.text();
+        data = { message: text };
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        error.data = data;
+        throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      // Log the error with more context
+      console.error(`API request failed for ${endpoint}:`, {
+        error: error.message,
+        status: error.status,
+        url,
+        method: options.method || 'GET'
+      });
+      
+      // Rethrow for handling by the component
       throw error;
     }
   }

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
+import { paymentAPI } from '../services/api';
+import { logger } from '../utils/logger';
 import Button from '../components/common/Button';
 import InputField from '../components/common/InputField';
 import ProgressBar from '../components/common/ProgressBar';
@@ -121,7 +123,7 @@ const Payment = () => {
       setShowCopyAlert(true);
       setTimeout(() => setShowCopyAlert(false), 2000);
     } catch (err) {
-      console.error("خطا در کپی کردن:", err);
+      logger.error('Copy to clipboard failed', { error: err });
     }
   };
 
@@ -215,7 +217,7 @@ const Payment = () => {
         navigate('/dashboard');
       }, 3000);
     } catch (error) {
-      console.error('خطا در ثبت پرداخت:', error);
+      logger.error('Payment registration failed', { error });
       setErrors({ submit: 'خطا در ثبت پرداخت. لطفاً دوباره تلاش کنید.' });
     } finally {
       setIsLoading(false);

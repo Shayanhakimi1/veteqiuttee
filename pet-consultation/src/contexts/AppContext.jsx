@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI, usersAPI, consultationsAPI } from '../services/api';
+import { logger } from '../utils/logger';
 
 // ایجاد Context
 const AppContext = createContext();
@@ -43,7 +44,7 @@ const AppProvider = ({ children }) => {
               authAPI.logout();
             }
           } catch (error) {
-            console.error('خطا در تایید توکن:', error);
+            logger.error('خطا در تایید توکن', { error });
             authAPI.logout();
           }
         }
@@ -61,7 +62,7 @@ const AppProvider = ({ children }) => {
         }
         // Admin status check removed
       } catch (error) {
-        console.error('خطا در راه‌اندازی اپلیکیشن:', error);
+        logger.error('خطا در راه‌اندازی اپلیکیشن', { error });
       }
     };
 
@@ -75,7 +76,7 @@ const AppProvider = ({ children }) => {
       setUserData(profile.user);
       return profile;
     } catch (error) {
-      console.error('خطا در بارگذاری پروفایل کاربر:', error);
+      logger.error('خطا در بارگذاری پروفایل کاربر', { error });
       throw error;
     }
   };
@@ -89,7 +90,7 @@ const AppProvider = ({ children }) => {
       // Temporary save to localStorage for registration process
       localStorage.setItem('userData', JSON.stringify(data));
     } catch (error) {
-      console.error('خطا در ذخیره اطلاعات کاربر:', error);
+      logger.error('خطا در ذخیره اطلاعات کاربر', { error });
     }
   };
 
@@ -104,14 +105,14 @@ const AppProvider = ({ children }) => {
       setSelectedPet(petData);
       localStorage.setItem('selectedPetType', JSON.stringify(petData));
     } catch (error) {
-      console.error('خطا در ذخیره انتخاب پت:', error);
+      logger.error('خطا در ذخیره انتخاب پت', { error });
     }
   };
 
   // ذخیره اطلاعات مشاوره
   const saveConsultationData = async (data, files = []) => {
     try {
-      console.log('saveConsultationData called with:', { data, files });
+      logger.debug('saveConsultationData called with', { data, files });
       
       // اولیه: ذخیره پیش‌نویس محلی فوراً
       setConsultationData(data);
@@ -119,9 +120,9 @@ const AppProvider = ({ children }) => {
       
       // تلاش برای ذخیره در API
       try {
-        console.log('Attempting to save to API...');
-        const response = await consultationsAPI.create(data, files);
-        console.log('API response:', response);
+        logger.info('Attempting to save to API...');
+        const response = await consultationsAPI.create(consultationData);
+        logger.info('API response received', { response });
 
         // اگر موفق بود، شناسه بازگشتی را ذخیره کنیم تا در پرداخت استفاده شود
         const apiConsultation = response?.data?.consultation;
@@ -133,13 +134,13 @@ const AppProvider = ({ children }) => {
 
         return response;
       } catch (apiError) {
-        console.warn('Failed to save to API, continuing with localStorage only:', apiError);
+        logger.warn('Failed to save to API, continuing with localStorage only', { apiError });
         // ادامه با localStorage (شناسه در این حالت وجود نخواهد داشت)
       }
       
       return data;
     } catch (error) {
-      console.error('خطا در ذخیره اطلاعات مشاوره:', error);
+      logger.error('خطا در ذخیره اطلاعات مشاوره', { error });
       throw error;
     }
   };
@@ -151,7 +152,7 @@ const AppProvider = ({ children }) => {
       localStorage.setItem('paymentData', JSON.stringify(data));
       return data;
     } catch (error) {
-      console.error('خطا در ذخیره اطلاعات پرداخت:', error);
+      logger.error('خطا در ذخیره اطلاعات پرداخت', { error });
       throw error;
     }
   };
@@ -166,7 +167,7 @@ const AppProvider = ({ children }) => {
       localStorage.removeItem('currentUser');
       setUserData(null);
     } catch (error) {
-      console.error('خطا در پاک کردن اطلاعات ثبت نام:', error);
+      logger.error('خطا در پاک کردن اطلاعات ثبت نام', { error });
     }
   };
 
@@ -179,7 +180,7 @@ const AppProvider = ({ children }) => {
       setConsultationData(null);
       setSelectedPet(null);
     } catch (error) {
-      console.error('خطا در پاک کردن اطلاعات مشاوره:', error);
+      logger.error('خطا در پاک کردن اطلاعات مشاوره', { error });
     }
   };
 
@@ -200,7 +201,7 @@ const AppProvider = ({ children }) => {
       setConsultationData(null);
       setPaymentData(null);
     } catch (error) {
-      console.error('خطا در پاک کردن اطلاعات:', error);
+      logger.error('خطا در پاک کردن اطلاعات', { error });
     }
   };
 

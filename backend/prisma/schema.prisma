@@ -6,296 +6,76 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
 }
 
-// User model for authentication and profile
 model User {
-  id          String   @id @default(cuid())
-  role        Role     @default(USER)
-  name        String
-  mobile      String   @unique
-  passwordHash String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  lastLoginAt DateTime?
-
-  // Relations
+  id            Int            @id @default(autoincrement())
+  fullName      String
+  mobile        String         @unique
+  password      String
+  role          String         @default("USER") // Replaced enum with String
   pets          Pet[]
   consultations Consultation[]
   payments      Payment[]
-  doctor        Doctor?
-  auditLogs     AuditLog[]
-  notifications Notification[]
-
-  @@map("users")
+  doctor        Doctor? // Relation to Doctor
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
-// Doctor model for medical professionals
-model Doctor {
-  id          String  @id @default(cuid())
-  userId      String  @unique
-  isActive    Boolean @default(true)
-  displayName String
-
-  // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
-
-  @@map("doctors")
-}
-
-// Pet model for user's animals
 model Pet {
-  id        String    @id @default(cuid())
-  userId    String
-  type      PetType
-  name      String
-  breed     String?
-  gender    Gender    @default(UNKNOWN)
-  neutered  Boolean   @default(false)
-  birthDate DateTime?
-  createdAt DateTime  @default(now())
-
-  // Relations
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            Int            @id @default(autoincrement())
+  name          String
+  petType       String // e.g., "dog", "cat", "other"
+  breed         String
+  age           Int
+  gender        String
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId       Int
   consultations Consultation[]
-
-  @@map("pets")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
-// Consultation model for vet appointments
+model Doctor {
+  id            Int            @id @default(autoincrement())
+  name          String
+  specialty     String
+  consultations Consultation[]
+  user          User?          @relation(fields: [userId], references: [id])
+  userId        Int?           @unique
+}
+
 model Consultation {
-  id               String             @id @default(cuid())
-  userId           String
-  petId            String
-  type             ConsultationType   @default(SPECIALIST)
-  status           ConsultationStatus @default(DRAFT)
-  basePriceToman   Int                @default(280000)
-  currency         Currency           @default(TOMAN)
-  messageText      String?
-  voiceMediaId String?       @unique // Optional voice note
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  // Relations
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pet         Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
-  voiceMedia  Media?        @relation("VoiceNote", fields: [voiceMediaId], references: [id])
-  media       Media[]       @relation("ConsultationMedia")
-  payments    Payment[]
-  appointment Appointment?
-
-  @@map("consultations")
+  id                 Int      @id @default(autoincrement())
+  consultationType   String
+  description        String
+  medicalDocuments   String? // Stored as a single string (e.g., comma-separated URLs)
+  videos             String? // Stored as a single string
+  audioFiles         String? // Stored as a single string
+  status             String   @default("PENDING_PAYMENT") // Replaced enum with String
+  scheduledDate      DateTime?
+  user               User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId             Int
+  pet                Pet      @relation(fields: [petId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  petId              Int
+  doctor             Doctor?  @relation(fields: [doctorId], references: [id])
+  doctorId           Int?
+  payment            Payment?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
-// Appointment model for scheduled consultations
-model Appointment {
-  id              String            @id @default(cuid())
-  consultationId  String            @unique
-  doctorId        String?
-  startAt         DateTime
-  endAt           DateTime
-  timezone        String            @default("Asia/Tehran")
-  status          AppointmentStatus @default(HELD)
-  holdExpiresAt   DateTime?
-
-  // Relations
-  consultation Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
-  doctor       Doctor?      @relation(fields: [doctorId], references: [id])
-
-  @@map("appointments")
-}
-
-// Media model for file attachments
-model Media {
-  id               String      @id @default(cuid())
-  consultationId   String?
-  ownerUserId      String
-  category         MediaCategory
-  purpose          MediaPurpose
-  url              String
-  mimeType         String
-  sizeBytes        Int
-  durationSec      Int?
-  width            Int?
-  height           Int?
-  createdAt        DateTime    @default(now())
-
-  // Relations
-  consultation       Consultation? @relation("ConsultationMedia", fields: [consultationId], references: [id], onDelete: Cascade)
-  voiceConsultation  Consultation? @relation("VoiceNote")
-
-  @@map("media")
-}
-
-// Payment model for transactions
 model Payment {
-  id             String        @id @default(cuid())
-  consultationId String
-  userId         String
-  provider       PaymentProvider
-  amountToman    Int
-  amountRials    Int
-  authority      String?
-  refId          String?
-  status         PaymentStatus @default(INITIATED)
-  paidAt         DateTime?
-  rawRequest     Json?
-  rawResponse    Json?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  // Relations
-  consultation Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("payments")
-}
-
-// Notification model for system notifications
-model Notification {
-  id         String           @id @default(cuid())
-  targetRole Role
-  userId     String?
-  payload    Json
-  type       NotificationType
-  isRead     Boolean          @default(false)
-  createdAt  DateTime         @default(now())
-
-  // Relations
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
-}
-
-// SMS Message model for SMS tracking
-model SMSMessage {
-  id                String    @id @default(cuid())
-  to                String
-  body              String
-  status            SMSStatus @default(QUEUED)
-  providerMessageId String?
-  error             String?
-  createdAt         DateTime  @default(now())
-
-  @@map("sms_messages")
-}
-
-// Audit Log model for tracking important actions
-model AuditLog {
-  id           String   @id @default(cuid())
-  actorUserId  String?
-  action       String
-  entityType   String
-  entityId     String
-  meta         Json?
-  createdAt    DateTime @default(now())
-
-  // Relations
-  actor User? @relation(fields: [actorUserId], references: [id])
-
-  @@map("audit_logs")
-}
-
-// System Configuration model
-model SystemConfig {
-  id                    String @id @default(cuid())
-  tz                    String @default("Asia/Tehran")
-  oddWeekdays           Int[]  @default([6, 1, 3]) // Saturday, Monday, Wednesday
-  startHour             Int    @default(17)
-  endHour               Int    @default(21)
-  slotIntervalMins      Int    @default(30)
-  slotHoldMins          Int    @default(15)
-  specialistPriceToman  Int    @default(280000)
-
-  @@map("system_config")
-}
-
-// Enums
-enum Role {
-  USER
-  ADMIN
-  DOCTOR
-}
-
-enum PetType {
-  DOG
-  CAT
-  OTHER
-}
-
-enum Gender {
-  MALE
-  FEMALE
-  UNKNOWN
-}
-
-enum ConsultationType {
-  SPECIALIST
-}
-
-enum ConsultationStatus {
-  DRAFT
-  DETAILS_SUBMITTED
-  SLOT_HELD
-  PAYMENT_INITIATED
-  PAID
-  SCHEDULED
-  COMPLETED
-  CANCELED
-  EXPIRED
-}
-
-enum AppointmentStatus {
-  HELD
-  CONFIRMED
-  CANCELED
-  COMPLETED
-}
-
-enum Currency {
-  TOMAN
-}
-
-enum MediaCategory {
-  AUDIO
-  VIDEO
-  DOCUMENT
-  IMAGE
-}
-
-enum MediaPurpose {
-  VOICE_NOTE
-  MEDICAL_DOC
-  PET_VIDEO
-  OTHER
-}
-
-enum PaymentProvider {
-  ZARINPAL
-  MOCK
-}
-
-enum PaymentStatus {
-  INITIATED
-  PENDING
-  VERIFIED
-  FAILED
-  EXPIRED
-  CANCELED
-}
-
-enum NotificationType {
-  PAYMENT_SUCCESS
-  NEW_CONSULTATION
-  SLOT_SELECTED
-  APPOINTMENT_CONFIRMED
-}
-
-enum SMSStatus {
-  QUEUED
-  SENT
-  FAILED
+  id             Int      @id @default(autoincrement())
+  amount         Float
+  paymentReceipt String // URL to the receipt image
+  status         String   @default("PENDING_VERIFICATION") // Replaced enum with String
+  user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId         Int
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  consultationId Int      @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import Button from "../components/common/Button";
 import InputField from "../components/common/InputField";
+import { logger } from "../utils/logger";
 import Alert from "../components/common/Alert";
 import fatahiyanLogo from "../assets/fattahian3.png";
 import { translateError } from "../utils/errorTranslations";
@@ -28,7 +29,7 @@ const Login = () => {
         const parsedData = JSON.parse(savedData);
         setFormData((prev) => ({ ...prev, ...parsedData }));
       } catch (error) {
-        console.error("خطا در بارگذاری اطلاعات ورود:", error);
+        logger.error('Failed to load login information', { error });
       }
     }
   }, []);

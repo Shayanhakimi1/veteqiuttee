@@ -11,6 +11,7 @@ import {
   translateError,
   translateValidationErrors,
 } from "../utils/errorTranslations";
+import { logger } from "../utils/logger";
 
 // صفحه ثبت نام
 const Registration = () => {
@@ -36,7 +37,7 @@ const Registration = () => {
   useEffect(() => {
     // هیچ اطلاعاتی در localStorage ذخیره نمی‌شود
     // فرم همیشه خالی شروع می‌شود
-    console.log("صفحه ثبت‌نام بارگذاری شد - فرم خالی");
+    logger.info('Registration page loaded with empty form');
   }, []);
 
   // تولید placeholder بر اساس نوع حیوان انتخابی
@@ -135,8 +136,11 @@ const Registration = () => {
       }
 
       case "password":
-        if (value.length < 6) {
-          newErrors.password = "رمز عبور باید حداقل 6 کاراکتر باشد";
+        if (value.length < 8) {
+          newErrors.password = "رمز عبور باید حداقل 8 کاراکتر باشد";
+        } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(value)) {
+          newErrors.password =
+            "رمز عبور باید شامل حروف کوچک و بزرگ انگلیسی و اعداد باشد";
         } else {
           delete newErrors.password;
         }
@@ -212,7 +216,7 @@ const Registration = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    console.log("Form submitted with data:", formData);
+    logger.info('Form submitted', { formData });
 
     // اعتبارسنجی کامل
     const newErrors = {};
@@ -271,76 +275,38 @@ const Registration = () => {
       newErrors.petType = "لطفاً نوع حیوان خانگی را انتخاب کنید";
     }
 
-    console.log("Validation errors:", newErrors);
+    logger.warn('Form validation errors', { errors: newErrors });
     setErrors(newErrors);
 
     // بررسی وجود خطا
     if (Object.keys(newErrors).length > 0) {
-      console.log("Form has validation errors, not submitting");
+      logger.warn('Form submission blocked due to validation errors');
       return;
     }
 
-    console.log("Form is valid, proceeding with registration...");
+    logger.info('Form validation passed, proceeding with registration');
 
     setIsLoading(true);
 
     // ثبت‌نام با استفاده از API
     setTimeout(async () => {
       try {
-        console.log("شروع فرآیند ثبت‌نام...");
+        logger.info('Starting registration process');
 
         // پاک کردن خطاهای قبلی
         setErrors((prev) => ({ ...prev, submit: null }));
 
-        // تقسیم اطلاعات به بخش‌های مختلف
-        const nameParts = formData.fullName
-          .trim()
-          .split(" ")
-          .filter((part) => part.length > 0);
-        const userData = {
-          firstName: nameParts[0] || "",
-          lastName: nameParts.slice(1).join(" ") || nameParts[0] || "",
-          mobile: formData.mobile,
-          password: formData.password,
+        const registrationData = {
+          ...formData,
+          petAge: formData.petAge ? parseInt(formData.petAge, 10) : null,
+          petType: selectedPet?.name || "Unknown", // اضافه کردن نوع حیوان خانگی
         };
 
-        // تبدیل نوع حیوان به انگلیسی
-        const getSpeciesInEnglish = (persianName) => {
-          const speciesMap = {
-            'سگ': 'dog',
-            'گربه': 'cat',
-            'پرنده': 'bird',
-            'خرگوش': 'rabbit',
-            'همستر': 'hamster',
-            'ماهی': 'fish',
-            'خزنده': 'reptile'
-          };
-          return speciesMap[persianName] || 'other';
-        };
-
-        // تبدیل جنسیت به انگلیسی
-        const getGenderInEnglish = (persianGender) => {
-          const genderMap = {
-            'نر': 'MALE',
-            'ماده': 'FEMALE'
-          };
-          return genderMap[persianGender] || 'UNKNOWN';
-        };
-
-        const petData = {
-          name: formData.petName,
-          species: getSpeciesInEnglish(selectedPet?.name || 'نامشخص'),
-          breed: formData.petBreed || null,
-          age: formData.petAge ? parseInt(formData.petAge) : null,
-          gender: getGenderInEnglish(formData.petGender),
-          isNeutered: Boolean(formData.isNeutered),
-        };
-
-        console.log("ارسال اطلاعات به سرور:", { userData, petData });
+        logger.info('Sending registration data to server', { registrationData });
 
         // ثبت‌نام کاربر
-        const response = await register(userData, petData);
-        console.log("پاسخ سرور:", response);
+        const response = await register(registrationData);
+        logger.info('Registration successful', { response });
 
         setIsLoading(false);
 
@@ -352,7 +318,11 @@ const Registration = () => {
           navigate("/dashboard");
         }, 1000);
       } catch (error) {
-        console.error("خطا در ثبت‌نام:", error);
+        logger.error('Registration failed', { 
+            error,
+            errorMessage: error.message,
+            errorResponse: error.response?.data 
+        });
         setIsLoading(false);
 
         // مدیریت انواع مختلف خطا
@@ -424,7 +394,7 @@ const Registration = () => {
             }
           }
         } catch (parseError) {
-          console.error("خطا در تجزیه خطا:", parseError);
+          logger.error('Error parsing registration error', { parseError });
           errorMessage = "خطای غیرمنتظره رخ داد. لطفاً دوباره تلاش کنید.";
         }
 

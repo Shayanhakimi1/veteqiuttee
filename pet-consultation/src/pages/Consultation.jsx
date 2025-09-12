@@ -7,6 +7,7 @@ import FileUploader from '../components/common/FileUploader';
 import VoiceRecorder from '../components/common/VoiceRecorder';
 import ProgressBar from '../components/common/ProgressBar';
 import Alert from '../components/common/Alert';
+import { logger } from '../utils/logger';
 
 const Consultation = () => {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ const Consultation = () => {
           audioFiles: parsed.audioFiles || []
         });
       } catch (error) {
-        console.error('خطا در بارگذاری داده‌های ذخیره شده:', error);
+        logger.error('Failed to load saved consultation data', { error });
       }
     }
     
@@ -110,7 +111,7 @@ const Consultation = () => {
       // هدایت به صفحه پرداخت با ارسال state
       navigate("/payment", { state: payload });
     } catch (error) {
-      console.error(error);
+      logger.error('Consultation form submission error', { error });
       const translated = translateError(error.message) || "خطا در ارسال اطلاعات مشاوره";
       setErrors({ submit: translated });
     } finally {

@@ -4,6 +4,7 @@ import { consultationsAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { translateError } from '../utils/errorTranslations';
+import { logger } from '../utils/logger';
 
 const PaymentVerify = () => {
   const [message, setMessage] = useState('در حال تأیید پرداخت...');
@@ -18,7 +19,7 @@ const PaymentVerify = () => {
       const raw = localStorage.getItem('consultationData');
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
-      console.error('خطا در خواندن consultationData از localStorage:', e);
+      logger.error('Failed to read consultation data from localStorage', { error: e });
       return null;
     }
   };
