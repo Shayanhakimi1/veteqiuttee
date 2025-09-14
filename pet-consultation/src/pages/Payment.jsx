@@ -8,7 +8,7 @@ import InputField from '../components/common/InputField';
 import ProgressBar from '../components/common/ProgressBar';
 import Notification from '../components/common/Notification';
 import FileUploader from '../components/common/FileUploader';
-import fatahiyanLogo from '../assets/fattahian3.png';
+
 
 // صفحه پرداخت
 const Payment = () => {
@@ -380,7 +380,7 @@ const Payment = () => {
 
       {/* فوتر ساده با لوگو */}
       <div className="py-6 text-center text-white opacity-80">
-        <img src={fatahiyanLogo} alt="لوگو" className="w-16 h-16 mx-auto mb-2 opacity-90" />
+
         <p className="text-sm">بیمارستان دامپزشکی دکتر فتاحیان</p>
       </div>
 

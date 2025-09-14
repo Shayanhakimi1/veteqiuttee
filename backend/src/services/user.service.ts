@@ -21,7 +21,7 @@ export const createUser = async (userData: any) => {
       data: {
         name: petName,
         breed: petBreed,
-        age: petAge,
+        age: parseInt(petAge, 10), // تبدیل به integer
         gender: petGender,
         ownerId: user.id,
         petType: petType, // Use the provided petType

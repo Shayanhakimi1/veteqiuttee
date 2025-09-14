@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -70,12 +70,15 @@ model Consultation {
 model Payment {
   id             Int      @id @default(autoincrement())
   amount         Float
-  paymentReceipt String // URL to the receipt image
+  paymentReceipt String? // URL to the receipt image
+  paymentMethod  String   @default("card") // payment method
+  paymentDate    DateTime @default(now()) // when payment was made
+  description    String? // payment description
   status         String   @default("PENDING_VERIFICATION") // Replaced enum with String
   user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   userId         Int
-  consultation   Consultation @relation(fields: [consultationId], references: [id])
-  consultationId Int      @unique
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+  consultationId Int?     @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

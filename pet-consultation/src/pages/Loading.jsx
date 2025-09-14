@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import fatahiyanVideo from "/src/assets/kishisland.mp4";
+import fatahiyanVideo from "../assets/kishisland.mp4";
 import fatahiyanLogo from "../assets/fattahian3.png";
 import posterImage from "../assets/kishisland2.jpg";
 

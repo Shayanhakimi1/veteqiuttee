@@ -1,236 +1,358 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../contexts/AppContext';
+import { adminAPI } from '../services/api';
+import { logger } from '../utils/logger';
 import Button from '../components/common/Button';
+import InputField from '../components/common/InputField';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { clearAllData } = useApp();
-  const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [consultations, setConsultations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [activeTab, setActiveTab] = useState('users');
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    totalPayments: 0,
+    totalConsultations: 0,
+    pendingPayments: 0
+  });
 
-  // داده‌های نمونه برای نمایش
   useEffect(() => {
-    // شبیه‌سازی بارگذاری داده‌ها
-    setTimeout(() => {
-      setUsers([
-        {
-          id: 1,
-          name: 'احمد محمدی',
-          mobile: '09123456789',
-          petType: 'گربه',
-          petName: 'میو',
-          registrationDate: '1403/08/15',
-          status: 'فعال'
-        },
-        {
-          id: 2,
-          name: 'فاطمه احمدی',
-          mobile: '09987654321',
-          petType: 'سگ',
-          petName: 'رکس',
-          registrationDate: '1403/08/14',
-          status: 'فعال'
-        },
-        {
-          id: 3,
-          name: 'علی رضایی',
-          mobile: '09111222333',
-          petType: 'پرنده',
-          petName: 'طوطی',
-          registrationDate: '1403/08/13',
-          status: 'غیرفعال'
-        }
-      ]);
-
-      setPayments([
-        {
-          id: 1,
-          userId: 1,
-          userName: 'احمد محمدی',
-          amount: 50000,
-          status: 'پرداخت شده',
-          date: '1403/08/15',
-          trackingCode: 'TRK001'
-        },
-        {
-          id: 2,
-          userId: 2,
-          userName: 'فاطمه احمدی',
-          amount: 75000,
-          status: 'در انتظار',
-          date: '1403/08/14',
-          trackingCode: 'TRK002'
-        },
-        {
-          id: 3,
-          userId: 3,
-          userName: 'علی رضایی',
-          amount: 60000,
-          status: 'لغو شده',
-          date: '1403/08/13',
-          trackingCode: 'TRK003'
-        }
-      ]);
-
-      setLoading(false);
-    }, 1000);
+    loadDashboardData();
   }, []);
 
-  const handleLogout = () => {
-    clearAllData();
-    navigate('/login');
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchTerm, filterStatus]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [usersData, paymentsData, consultationsData, statsData] = await Promise.all([
+        adminAPI.getAllUsers().catch(() => ({ data: [] })),
+        adminAPI.getAllPayments().catch(() => ({ data: [] })),
+        adminAPI.getAllConsultations().catch(() => ({ data: [] })),
+        adminAPI.getDashboardStats().catch(() => ({}))
+      ]);
+
+      const usersArray = usersData.data || usersData || [];
+      const paymentsArray = paymentsData.data || paymentsData || [];
+      const consultationsArray = consultationsData.data || consultationsData || [];
+
+      setUsers(usersArray);
+      setPayments(paymentsArray);
+      setConsultations(consultationsArray);
+      setDashboardStats(statsData || {
+        totalUsers: usersArray.length,
+        totalPayments: paymentsArray.length,
+        totalConsultations: consultationsArray.length,
+        pendingPayments: paymentsArray.filter(p => p.status === 'PENDING_VERIFICATION').length
+      });
+    } catch (error) {
+      logger.error('Failed to load dashboard data', { error });
+      setError('خطا در بارگذاری اطلاعات داشبورد');
+      // Set sample data for demonstration
+      setSampleData();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'فعال':
-      case 'پرداخت شده':
-        return 'text-green-600 bg-green-100';
-      case 'در انتظار':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'غیرفعال':
-      case 'لغو شده':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+  const setSampleData = () => {
+    const sampleUsers = [
+      {
+        id: 1,
+        fullName: 'احمد محمدی',
+        mobile: '09123456789',
+        createdAt: new Date().toISOString(),
+        pets: [{ name: 'میو', petType: 'گربه', breed: 'پرشین', age: 3, gender: 'نر' }]
+      },
+      {
+        id: 2,
+        fullName: 'فاطمه احمدی',
+        mobile: '09987654321',
+        createdAt: new Date().toISOString(),
+        pets: [{ name: 'رکس', petType: 'سگ', breed: 'ژرمن', age: 5, gender: 'نر' }]
+      }
+    ];
+    
+    const samplePayments = [
+      {
+        id: 1,
+        userId: 1,
+        amount: 280000,
+        status: 'VERIFIED',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 2,
+        userId: 2,
+        amount: 280000,
+        status: 'PENDING_VERIFICATION',
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    const sampleConsultations = [
+      {
+        id: 1,
+        userId: 1,
+        consultationType: 'مشاوره عمومی',
+        status: 'COMPLETED',
+        description: 'مشاوره در مورد تغذیه گربه',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    setUsers(sampleUsers);
+    setPayments(samplePayments);
+    setConsultations(sampleConsultations);
+    setDashboardStats({
+      totalUsers: sampleUsers.length,
+      totalPayments: samplePayments.length,
+      totalConsultations: sampleConsultations.length,
+      pendingPayments: samplePayments.filter(p => p.status === 'PENDING_VERIFICATION').length
+    });
+  };
+
+  const filterUsers = () => {
+    let filtered = users;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.mobile.includes(searchTerm)
+      );
     }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'paid') {
+        filtered = filtered.filter(user => {
+          const userPayments = payments.filter(p => p.userId === user.id);
+          return userPayments.some(p => p.status === 'VERIFIED');
+        });
+      } else if (filterStatus === 'pending') {
+        filtered = filtered.filter(user => {
+          const userPayments = payments.filter(p => p.userId === user.id);
+          return userPayments.some(p => p.status === 'PENDING_VERIFICATION');
+        });
+      } else if (filterStatus === 'no-payment') {
+        filtered = filtered.filter(user => {
+          const userPayments = payments.filter(p => p.userId === user.id);
+          return userPayments.length === 0;
+        });
+      }
+    }
+
+    setFilteredUsers(filtered);
+  };
+
+  const getUserPaymentStatus = (userId) => {
+    const userPayments = payments.filter(p => p.userId === userId);
+    if (userPayments.length === 0) return { status: 'no-payment', text: 'بدون پرداخت', color: 'text-gray-500' };
+    
+    const hasVerified = userPayments.some(p => p.status === 'VERIFIED');
+    const hasPending = userPayments.some(p => p.status === 'PENDING_VERIFICATION');
+    
+    if (hasVerified) return { status: 'verified', text: 'تایید شده', color: 'text-green-600' };
+    if (hasPending) return { status: 'pending', text: 'در انتظار تایید', color: 'text-yellow-600' };
+    return { status: 'rejected', text: 'رد شده', color: 'text-red-600' };
+  };
+
+  const getUserConsultations = (userId) => {
+    return consultations.filter(c => c.userId === userId);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('fa-IR');
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fa-IR').format(amount) + ' تومان';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">در حال بارگذاری...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">در حال بارگذاری...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* هدر */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">داشبورد مدیریت</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">مدیر سیستم</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="text-red-600 border-red-200 hover:bg-red-50"
-              >
-                خروج
-              </Button>
-            </div>
+    <div className="min-h-screen gradient-bg">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">داشبورد مدیریت</h1>
+            <Button
+              onClick={() => navigate('/dashboard')}
+              variant="outline"
+              size="sm"
+            >
+              بازگشت به داشبورد
+            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* محتوای اصلی */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* آمار کلی */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6 border">
+      {/* Stats Cards */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-cyan-100 text-cyan-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                 </svg>
               </div>
               <div className="mr-4">
                 <p className="text-sm font-medium text-gray-600">کل کاربران</p>
-                <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalUsers}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
               </div>
               <div className="mr-4">
-                <p className="text-sm font-medium text-gray-600">پرداخت‌های موفق</p>
-                <p className="text-2xl font-bold text-gray-900">{payments.filter(p => p.status === 'پرداخت شده').length}</p>
+                <p className="text-sm font-medium text-gray-600">کل پرداخت‌ها</p>
+                <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalPayments}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <div className="mr-4">
+                <p className="text-sm font-medium text-gray-600">کل مشاوره‌ها</p>
+                <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalConsultations}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="mr-4">
-                <p className="text-sm font-medium text-gray-600">در انتظار پرداخت</p>
-                <p className="text-2xl font-bold text-gray-900">{payments.filter(p => p.status === 'در انتظار').length}</p>
+                <p className="text-sm font-medium text-gray-600">پرداخت‌های در انتظار</p>
+                <p className="text-2xl font-bold text-gray-900">{dashboardStats.pendingPayments}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* تب‌ها */}
-        <div className="bg-white rounded-lg shadow-sm border">
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex">
+            <nav className="-mb-px flex space-x-8 px-6">
               <button
                 onClick={() => setActiveTab('users')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'users'
-                    ? 'border-cyan-500 text-cyan-600'
+                    ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                کاربران ثبت‌نام شده
+                مدیریت کاربران
               </button>
               <button
                 onClick={() => setActiveTab('payments')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'payments'
-                    ? 'border-cyan-500 text-cyan-600'
+                    ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                وضعیت پرداخت‌ها
+                مدیریت پرداخت‌ها
+              </button>
+              <button
+                onClick={() => setActiveTab('consultations')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'consultations'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                مدیریت مشاوره‌ها
               </button>
             </nav>
           </div>
 
-          <div className="p-6">
-            {activeTab === 'users' && (
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <div className="p-6">
+              {/* Search and Filter */}
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <InputField
+                    type="text"
+                    placeholder="جستجو بر اساس نام یا شماره موبایل..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="md:w-48">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">همه کاربران</option>
+                    <option value="paid">پرداخت شده</option>
+                    <option value="pending">در انتظار تایید</option>
+                    <option value="no-payment">بدون پرداخت</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Users Table */}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        نام کاربر
+                        کاربر
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         شماره موبایل
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        نوع حیوان
+                        وضعیت پرداخت
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        نام حیوان
+                        تعداد مشاوره‌ها
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        تاریخ ثبت‌نام
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        وضعیت
+                        تاریخ عضویت
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         عملیات
@@ -238,64 +360,78 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {user.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.mobile}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.petType}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.petName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.registrationDate}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="flex gap-2">
-                            <button className="text-cyan-600 hover:text-cyan-900 text-xs">
-                              ویرایش
+                    {filteredUsers.map((user) => {
+                      const paymentStatus = getUserPaymentStatus(user.id);
+                      const userConsultations = getUserConsultations(user.id);
+                      return (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {user.fullName.charAt(0)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="mr-4">
+                                <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
+                                <div className="text-sm text-gray-500">کاربر #{user.id}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {user.mobile}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`text-sm font-medium ${paymentStatus.color}`}>
+                              {paymentStatus.text}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {userConsultations.length}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(user.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => setSelectedUser(user)}
+                              className="text-blue-600 hover:text-blue-900 ml-4"
+                            >
+                              مشاهده جزئیات
                             </button>
-                            <button className="text-red-600 hover:text-red-900 text-xs">
-                              حذف
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-            )}
+            </div>
+          )}
 
-            {activeTab === 'payments' && (
+          {/* Payments Tab */}
+          {activeTab === 'payments' && (
+            <div className="p-6">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        نام کاربر
+                        شناسه پرداخت
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        مبلغ (تومان)
+                        کاربر
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        وضعیت پرداخت
+                        مبلغ
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        تاریخ
+                        وضعیت
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        کد پیگیری
+                        تاریخ پرداخت
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         عملیات
@@ -303,44 +439,236 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {payments.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {payment.userName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {payment.amount.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
-                            {payment.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {payment.date}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {payment.trackingCode}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="flex gap-2">
-                            <button className="text-cyan-600 hover:text-cyan-900 text-xs">
-                              جزئیات
+                    {payments.map((payment) => {
+                      const user = users.find(u => u.id === payment.userId);
+                      return (
+                        <tr key={payment.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            #{payment.id}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {user?.fullName || 'نامشخص'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatCurrency(payment.amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              payment.status === 'VERIFIED' ? 'bg-green-100 text-green-800' :
+                              payment.status === 'PENDING_VERIFICATION' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {payment.status === 'VERIFIED' ? 'تایید شده' :
+                               payment.status === 'PENDING_VERIFICATION' ? 'در انتظار تایید' :
+                               'رد شده'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(payment.paymentDate || payment.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-blue-600 hover:text-blue-900 ml-4">
+                              مشاهده رسید
                             </button>
-                            <button className="text-green-600 hover:text-green-900 text-xs">
-                              تأیید
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Consultations Tab */}
+          {activeTab === 'consultations' && (
+            <div className="p-6">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        شناسه مشاوره
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        کاربر
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        نوع مشاوره
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        وضعیت
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        تاریخ ایجاد
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        عملیات
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {consultations.map((consultation) => {
+                      const user = users.find(u => u.id === consultation.userId);
+                      return (
+                        <tr key={consultation.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            #{consultation.id}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {user?.fullName || 'نامشخص'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {consultation.consultationType}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              consultation.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                              consultation.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                              consultation.status === 'PENDING_PAYMENT' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {consultation.status === 'COMPLETED' ? 'تکمیل شده' :
+                               consultation.status === 'IN_PROGRESS' ? 'در حال انجام' :
+                               consultation.status === 'PENDING_PAYMENT' ? 'در انتظار پرداخت' :
+                               consultation.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(consultation.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-blue-600 hover:text-blue-900 ml-4">
+                              مشاهده جزئیات
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">جزئیات کاربر</h3>
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">نام کامل</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.fullName}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">شماره موبایل</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedUser.mobile}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">تاریخ عضویت</label>
+                  <p className="mt-1 text-sm text-gray-900">{formatDate(selectedUser.createdAt)}</p>
+                </div>
+
+                {/* User's Pets */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">حیوانات خانگی</label>
+                  {selectedUser.pets && selectedUser.pets.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedUser.pets.map((pet, index) => (
+                        <div key={index} className="bg-gray-50 p-3 rounded-md">
+                          <p className="text-sm"><strong>نام:</strong> {pet.name}</p>
+                          <p className="text-sm"><strong>نوع:</strong> {pet.petType}</p>
+                          <p className="text-sm"><strong>نژاد:</strong> {pet.breed}</p>
+                          <p className="text-sm"><strong>سن:</strong> {pet.age} سال</p>
+                          <p className="text-sm"><strong>جنسیت:</strong> {pet.gender}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">هیچ حیوان خانگی ثبت نشده</p>
+                  )}
+                </div>
+
+                {/* User's Payments */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">پرداخت‌ها</label>
+                  {(() => {
+                    const userPayments = payments.filter(p => p.userId === selectedUser.id);
+                    return userPayments.length > 0 ? (
+                      <div className="space-y-2">
+                        {userPayments.map((payment) => (
+                          <div key={payment.id} className="bg-gray-50 p-3 rounded-md">
+                            <p className="text-sm"><strong>مبلغ:</strong> {formatCurrency(payment.amount)}</p>
+                            <p className="text-sm"><strong>وضعیت:</strong> {payment.status}</p>
+                            <p className="text-sm"><strong>تاریخ:</strong> {formatDate(payment.paymentDate || payment.createdAt)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">هیچ پرداختی ثبت نشده</p>
+                    );
+                  })()}
+                </div>
+
+                {/* User's Consultations */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">مشاوره‌ها</label>
+                  {(() => {
+                    const userConsultations = consultations.filter(c => c.userId === selectedUser.id);
+                    return userConsultations.length > 0 ? (
+                      <div className="space-y-2">
+                        {userConsultations.map((consultation) => (
+                          <div key={consultation.id} className="bg-gray-50 p-3 rounded-md">
+                            <p className="text-sm"><strong>نوع:</strong> {consultation.consultationType}</p>
+                            <p className="text-sm"><strong>وضعیت:</strong> {consultation.status}</p>
+                            <p className="text-sm"><strong>توضیحات:</strong> {consultation.description}</p>
+                            <p className="text-sm"><strong>تاریخ:</strong> {formatDate(consultation.createdAt)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">هیچ مشاوره‌ای ثبت نشده</p>
+                    );
+                  })()}
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <Button
+                  onClick={() => setSelectedUser(null)}
+                  variant="outline"
+                >
+                  بستن
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+      )}
+
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
+          {error}
+        </div>
+      )}
     </div>
   );
 };

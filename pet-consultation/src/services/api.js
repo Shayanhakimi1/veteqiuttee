@@ -261,12 +261,37 @@ export const appointmentsAPI = {
   },
 };
 
+// Payment API
+export const paymentAPI = {
+  // Create payment
+  create: async (paymentData) => {
+    return apiRequest("/payments", {
+      method: "POST",
+      body: JSON.stringify(paymentData),
+    });
+  },
+
+  // Get payment by ID
+  getById: async (paymentId) => {
+    return apiRequest(`/payments/${paymentId}`);
+  },
+
+  // Update payment status
+  updateStatus: async (paymentId, statusData) => {
+    return apiRequest(`/payments/${paymentId}/status`, {
+      method: "PUT",
+      body: JSON.stringify(statusData),
+    });
+  },
+};
+
 export default {
   authAPI,
   usersAPI,
   consultationsAPI,
   healthAPI,
   appointmentsAPI,
+  paymentAPI,
 };
 
 // Admin API
