@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle } from 'lucide-react';
 import { logger } from '../../utils/logger';
+import { appointmentsAPI } from '../../services/api';
 
 const AppointmentScheduler = ({ onAppointmentSelect, selectedDate, selectedTime }) => {
   const [currentDate, setCurrentDate] = useState(selectedDate || '');
@@ -45,8 +46,7 @@ const AppointmentScheduler = ({ onAppointmentSelect, selectedDate, selectedTime 
     setError('');
     
     try {
-      const response = await fetch(`http://localhost:3001/api/appointments/available-slots/${date}`);
-      const data = await response.json();
+      const data = await appointmentsAPI.getAvailableSlots(date);
       
       if (data.success) {
         setAvailableSlots(data.slots);
@@ -55,7 +55,7 @@ const AppointmentScheduler = ({ onAppointmentSelect, selectedDate, selectedTime 
       }
     } catch (err) {
       logger.error('Failed to fetch available appointment slots', { error: err });
-      setError('خطا در اتصال به سرور');
+      setError(err.message || 'خطا در اتصال به سرور');
     } finally {
       setLoading(false);
     }

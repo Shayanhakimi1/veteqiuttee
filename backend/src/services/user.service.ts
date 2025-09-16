@@ -1,14 +1,23 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { logger } from '../utils/logger';
+import { CreateUserRequest, UserResponse, PetResponse } from '../types';
 
 const prisma = new PrismaClient();
 
-export const createUser = async (userData: any) => {
-  const { fullName, mobile, password, petName, petBreed, petAge, petGender, petType } = userData;
+export const createUser = async (userData: CreateUserRequest): Promise<{ user: UserResponse; pet: PetResponse }> => {
+  try {
+    const { fullName, mobile, password, petName, petBreed, petAge, petGender, petType } = userData;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+    // Validate petAge is a valid number
+    const parsedPetAge = parseInt(String(petAge), 10);
+    if (isNaN(parsedPetAge) || parsedPetAge < 0) {
+      throw new Error('Invalid pet age provided');
+    }
 
-  const result = await prisma.$transaction(async (prisma) => {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const result = await prisma.$transaction(async (prisma) => {
     const user = await prisma.user.create({
       data: {
         fullName,
@@ -21,7 +30,7 @@ export const createUser = async (userData: any) => {
       data: {
         name: petName,
         breed: petBreed,
-        age: parseInt(petAge, 10), // تبدیل به integer
+        age: parsedPetAge,
         gender: petGender,
         ownerId: user.id,
         petType: petType, // Use the provided petType
@@ -31,5 +40,25 @@ export const createUser = async (userData: any) => {
     return { user, pet };
   });
 
-  return result;
+    return { 
+      user: {
+        id: result.user.id,
+        fullName: result.user.fullName,
+        mobile: result.user.mobile,
+        createdAt: result.user.createdAt
+      }, 
+      pet: {
+        id: result.pet.id,
+        name: result.pet.name,
+        breed: result.pet.breed,
+        age: result.pet.age,
+        gender: result.pet.gender as 'male' | 'female',
+        type: result.pet.petType,
+        userId: result.pet.ownerId
+      }
+    };
+  } catch (error) {
+    logger.error('Failed to create user', { error, userData: { ...userData, password: '[REDACTED]' } });
+    throw error;
+  }
 };

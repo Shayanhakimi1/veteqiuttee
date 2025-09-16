@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { MdAdminPanelSettings } from 'react-icons/md';
 import { logger } from '../../utils/logger';
+import { authAPI } from '../../services/api';
 import './AdminLogin.css';
 
 const AdminLogin = () => {
@@ -28,15 +29,7 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
+      const data = await authAPI.loginAdmin(formData);
 
       if (data.success) {
         // Store admin tokens

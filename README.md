@@ -1,6 +1,79 @@
-# Veteqiutte2 - Pet Consultation System
+# 🐾 Veteqiutte2 - Pet Consultation System
 
-A comprehensive veterinary consultation and appointment booking system built with React, Node.js, and SQLite.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
+
+A comprehensive veterinary consultation and appointment booking system built with React, Node.js, TypeScript, and Prisma ORM.
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18 or higher
+- npm or yarn
+- Git
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/veteqiutte2.git
+   cd veteqiutte2
+   ```
+
+2. **Install dependencies**
+   ```bash
+   # Install root dependencies
+   npm install
+   
+   # Install backend dependencies
+   cd backend
+   npm install
+   
+   # Install frontend dependencies
+   cd ../pet-consultation
+   npm install
+   ```
+
+3. **Setup environment variables**
+   ```bash
+   # Copy example environment file
+   cp backend/.env.example backend/.env
+   
+   # Edit the .env file with your configuration
+   ```
+
+4. **Initialize database**
+   ```bash
+   cd backend
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. **Start development servers**
+   ```bash
+   # Start backend (from backend directory)
+   npm run dev
+   
+   # Start frontend (from pet-consultation directory)
+   npm run dev
+   ```
+
+## 📋 Available Scripts
+
+### Backend Scripts
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run db:generate` - Generate Prisma client
+- `npm run db:push` - Push database schema
+
+### Frontend Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
 ## Features
 
@@ -162,69 +235,126 @@ Access admin dashboard at: `http://localhost:5173/admin/dashboard`
 - **Payment**: Payment records with status tracking
 - **Doctor**: Doctor information (future feature)
 
-## Deployment
+## 🚀 Deployment
 
-### Using Docker
+This project includes comprehensive deployment guides for various hosting platforms:
 
-1. **Build and run with Docker Compose**
-   ```bash
-   docker-compose up --build
-   ```
+### Tegrahost Deployment
+- 📖 [Tegrahost Deployment Guide](./TEGRAHOST_DEPLOYMENT_GUIDE.md)
+- 📖 [Post Upload Configuration Guide](./POST_UPLOAD_CONFIGURATION_GUIDE.md)
+- 📖 [Deployment Checklist](./DEPLOYMENT_CHECKLIST.md)
 
-### Manual Deployment
+### GitHub Deployment
+- 📖 [GitHub Deployment Guide](./GITHUB_DEPLOYMENT_GUIDE.md)
+- 📖 [GitHub Secrets Setup](./GITHUB_SECRETS_SETUP.md)
+- 🔧 [Automated Deployment Script](./deploy_from_github.sh)
+- ⚙️ [GitHub Actions Workflow](./.github/workflows/deploy.yml)
 
-1. **Build frontend**
-   ```bash
-   cd pet-consultation
-   npm run build
-   ```
+### Quick Deployment Commands
 
-2. **Build backend**
-   ```bash
-   cd ../backend
-   npm run build
-   ```
+```bash
+# Build for production
+npm run build:all
 
-3. **Deploy to your hosting provider**
+# Test deployment locally
+bash test_deployment.sh
 
-## Environment Variables
+# Deploy from GitHub (automated)
+bash deploy_from_github.sh
+```
 
-### Backend (.env)
+## 🔧 Environment Variables
+
+Create a `.env` file in the `backend` directory:
+
 ```env
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="your-secret-key"
+# Database Configuration
+DATABASE_URL="your-database-connection-string"
+
+# JWT Secret (Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")
+JWT_SECRET="your-super-secret-jwt-key"
+
+# Environment
+NODE_ENV="production"
+
+# Server Port
 PORT=3003
 ```
 
-## Testing
+## 🧪 Testing
 
-### Run Tests
 ```bash
-# Frontend tests
+# Run backend tests
+cd backend
+npm test
+
+# Run frontend tests
 cd pet-consultation
 npm test
 
-# Backend tests (if available)
-cd ../backend
-npm test
+# Test deployment
+bash test_deployment.sh
 ```
 
-## Contributing
+## 📁 Project Structure
+
+```
+veteqiutte2/
+├── 📁 .github/workflows/     # GitHub Actions
+├── 📁 backend/               # Node.js Backend
+│   ├── 📁 src/
+│   │   ├── 📁 controllers/   # API Controllers
+│   │   ├── 📁 middleware/    # Express Middleware
+│   │   ├── 📁 routes/        # API Routes
+│   │   └── 📁 utils/         # Utility Functions
+│   ├── 📁 prisma/           # Database Schema
+│   └── 📄 package.json
+├── 📁 pet-consultation/      # React Frontend
+│   ├── 📁 src/
+│   │   ├── 📁 components/    # React Components
+│   │   ├── 📁 pages/         # Page Components
+│   │   ├── 📁 utils/         # Utility Functions
+│   │   └── 📁 assets/        # Static Assets
+│   └── 📄 package.json
+├── 📄 deploy_from_github.sh  # Deployment Script
+├── 📄 test_deployment.sh     # Testing Script
+└── 📄 README.md
+```
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## License
+### Development Guidelines
+- Follow TypeScript best practices
+- Use ESLint and Prettier for code formatting
+- Write meaningful commit messages
+- Add tests for new features
+- Update documentation as needed
 
-This project is licensed under the ISC License.
+## 📝 License
 
-## Support
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-For support or questions, please open an issue on GitHub.
+## 🆘 Support
+
+If you encounter any issues or have questions:
+
+1. Check the [deployment guides](./TEGRAHOST_DEPLOYMENT_GUIDE.md)
+2. Review the [troubleshooting section](./POST_UPLOAD_CONFIGURATION_GUIDE.md#troubleshooting)
+3. Open an issue on GitHub
+
+## 🙏 Acknowledgments
+
+- Built with ❤️ using React, Node.js, and TypeScript
+- Database powered by Prisma ORM
+- Styled with Tailwind CSS
+- Deployed with comprehensive automation scripts
 
 ---
 
-**Built with ❤️ for veterinary care**
+**Made with 🐾 for veterinary professionals**

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApp } from './useApp';
+import { useApp } from '../contexts/AppContext';
 import { authAPI } from '../services/api';
 import { translateError } from '../utils/errorTranslations';
 import { logger } from '../utils/logger';

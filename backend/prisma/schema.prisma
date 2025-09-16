@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -19,6 +19,7 @@ model User {
   pets          Pet[]
   consultations Consultation[]
   payments      Payment[]
+  media         Media[]        // Relation to Media files
   doctor        Doctor? // Relation to Doctor
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -51,9 +52,9 @@ model Consultation {
   id                 Int      @id @default(autoincrement())
   consultationType   String
   description        String
-  medicalDocuments   String? // Stored as a single string (e.g., comma-separated URLs)
-  videos             String? // Stored as a single string
-  audioFiles         String? // Stored as a single string
+  medicalDocuments   String? // Stored as a single string (e.g., comma-separated URLs) - DEPRECATED
+  videos             String? // Stored as a single string - DEPRECATED
+  audioFiles         String? // Stored as a single string - DEPRECATED
   status             String   @default("PENDING_PAYMENT") // Replaced enum with String
   scheduledDate      DateTime?
   user               User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -63,6 +64,7 @@ model Consultation {
   doctor             Doctor?  @relation(fields: [doctorId], references: [id])
   doctorId           Int?
   payment            Payment?
+  media              Media[]  // New relation to Media files
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -81,4 +83,26 @@ model Payment {
   consultationId Int?     @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model Media {
+  id             Int          @id @default(autoincrement())
+  fileName       String       // Generated unique filename
+  originalName   String       // Original filename from user
+  filePath       String       // Full path to the file
+  fileSize       Int          // File size in bytes
+  mimeType       String       // MIME type (e.g., 'audio/wav', 'video/mp4')
+  mediaType      String       // 'audio', 'video', 'document', 'image'
+  category       String       // 'medical_document', 'audio_file', 'video_file', 'voice_recording'
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  consultationId Int
+  user           User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId         Int
+  uploadedAt     DateTime     @default(now())
+  isActive       Boolean      @default(true)
+
+  @@index([consultationId])
+  @@index([userId])
+  @@index([mediaType])
+  @@index([category])
 }

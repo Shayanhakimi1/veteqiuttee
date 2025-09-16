@@ -22,6 +22,8 @@ const Consultation = () => {
     videos: [],
     audioFiles: []
   });
+  
+  const [uploadErrors, setUploadErrors] = useState({});
 
 
   // بارگذاری داده‌های ذخیره شده و نوع مشاوره
@@ -61,13 +63,99 @@ const Consultation = () => {
   // هندل آپلود فایل‌های پزشکی
   const handleMedicalRecordsUpload = (e) => {
     const files = Array.from(e.target.files || []);
-    setFormData((prev) => ({ ...prev, medicalRecords: files }));
+    const validFiles = [];
+    const errors = [];
+    
+    files.forEach(file => {
+      // بررسی اندازه فایل (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        errors.push(`فایل ${file.name} بیش از 5MB است`);
+        return;
+      }
+      
+      // بررسی نوع فایل
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        errors.push(`نوع فایل ${file.name} پشتیبانی نمی‌شود`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    if (errors.length > 0) {
+      setUploadErrors(prev => ({ ...prev, medicalDocuments: errors }));
+    } else {
+      setUploadErrors(prev => ({ ...prev, medicalDocuments: [] }));
+    }
+    
+    setFormData((prev) => ({ ...prev, medicalDocuments: validFiles }));
   };
 
   // هندل آپلود ویدیو
   const handleVideoUpload = (e) => {
     const file = e.target.files?.[0] || null;
-    setFormData((prev) => ({ ...prev, videoFile: file }));
+    const errors = [];
+    
+    if (file) {
+      // بررسی اندازه فایل (50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        errors.push('اندازه ویدیو نباید بیش از 50MB باشد');
+        setUploadErrors(prev => ({ ...prev, videos: errors }));
+        return;
+      }
+      
+      // بررسی نوع فایل
+      if (!file.type.startsWith('video/')) {
+        errors.push('فقط فایل‌های ویدیویی مجاز هستند');
+        setUploadErrors(prev => ({ ...prev, videos: errors }));
+        return;
+      }
+      
+      setUploadErrors(prev => ({ ...prev, videos: [] }));
+    }
+    
+    setFormData((prev) => ({ ...prev, videos: file ? [file] : [] }));
+  };
+
+  // هندل آپلود فایل‌های صوتی
+  const handleAudioUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = [];
+    const errors = [];
+    
+    files.forEach(file => {
+      // بررسی اندازه فایل (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        errors.push(`فایل صوتی ${file.name} بیش از 5MB است`);
+        return;
+      }
+      
+      // بررسی نوع فایل
+      if (!file.type.startsWith('audio/')) {
+        errors.push(`فایل ${file.name} نوع صوتی نیست`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    if (errors.length > 0) {
+      setUploadErrors(prev => ({ ...prev, audioFiles: errors }));
+    } else {
+      setUploadErrors(prev => ({ ...prev, audioFiles: [] }));
+    }
+    
+    setFormData((prev) => ({ ...prev, audioFiles: validFiles }));
+  };
+
+  // هندل ضبط صدا از VoiceRecorder
+  const handleVoiceRecording = (recordedFiles) => {
+    setFormData((prev) => ({ 
+      ...prev, 
+      audioFiles: [...prev.audioFiles, ...recordedFiles] 
+    }));
+    setUploadErrors(prev => ({ ...prev, audioFiles: [] }));
   };
 
 
@@ -219,31 +307,70 @@ const Consultation = () => {
                   محیط صدا (اختیاری)
                 </label>
                 <p className="text-sm text-gray-600 mb-3">
-                  در صورت داشتن فایل صوتی مرتبط با حیوان خانگی خود آن را آپلود کنید
+                  در صورت داشتن فایل صوتی مرتبط با حیوان خانگی خود آن را آپلود کنید یا صدای خود را ضبط کنید
                 </p>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                
+                {/* VoiceRecorder Component */}
+                <VoiceRecorder 
+                  onRecordingComplete={handleVoiceRecording}
+                  maxDuration={300}
+                />
+                
+                {/* File Upload for Audio */}
+                <div className="mt-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                   <div className="text-gray-400 mb-2">
-                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                   </div>
-                  <p className="text-gray-600 mb-2">فایل صوتی خود را آپلود کنید</p>
+                  <p className="text-gray-600 mb-2">یا فایل صوتی خود را آپلود کنید</p>
                   <p className="text-sm text-gray-500">حداکثر اندازه فایل: 5MB</p>
                   <input
                     type="file"
                     multiple
                     accept="audio/*"
-                    onChange={(e) => setFormData((p) => ({ ...p, audioFiles: Array.from(e.target.files || []) }))}
+                    onChange={handleAudioUpload}
                     className="hidden"
                     id="audio-upload"
                   />
                   <label
                     htmlFor="audio-upload"
-                    className="inline-block mt-4 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+                    className="inline-block mt-3 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
                   >
-                    انتخاب فایل
+                    انتخاب فایل صوتی
                   </label>
                 </div>
+                
+                {/* Display uploaded audio files */}
+                {formData.audioFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">فایل‌های صوتی انتخاب شده:</p>
+                    {formData.audioFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <span className="text-sm text-gray-600">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newFiles = formData.audioFiles.filter((_, i) => i !== index);
+                            setFormData(prev => ({ ...prev, audioFiles: newFiles }));
+                          }}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Display audio upload errors */}
+                {uploadErrors.audioFiles && uploadErrors.audioFiles.length > 0 && (
+                  <div className="mt-2 text-red-500 text-sm">
+                    {uploadErrors.audioFiles.map((error, index) => (
+                      <p key={index}>{error}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -262,7 +389,7 @@ const Consultation = () => {
                   </svg>
                 </div>
                 <p className="text-gray-600 mb-2">فایل های خود را آپلود کنید</p>
-                <p className="text-sm text-gray-500">حداکثر اندازه فایل: 5MB</p>
+                <p className="text-sm text-gray-500">حداکثر اندازه فایل: 5MB - فرمت‌های مجاز: JPG, PNG, PDF, DOC, DOCX</p>
                 <input
                   type="file"
                   multiple
@@ -278,6 +405,37 @@ const Consultation = () => {
                   انتخاب فایل
                 </label>
               </div>
+              
+              {/* Display uploaded medical documents */}
+              {formData.medicalDocuments.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium text-gray-700">اسناد پزشکی انتخاب شده:</p>
+                  {formData.medicalDocuments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <span className="text-sm text-gray-600">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newFiles = formData.medicalDocuments.filter((_, i) => i !== index);
+                          setFormData(prev => ({ ...prev, medicalDocuments: newFiles }));
+                        }}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Display medical documents upload errors */}
+              {uploadErrors.medicalDocuments && uploadErrors.medicalDocuments.length > 0 && (
+                <div className="mt-2 text-red-500 text-sm">
+                  {uploadErrors.medicalDocuments.map((error, index) => (
+                    <p key={index}>{error}</p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* باکس ویدیو */}
@@ -295,7 +453,7 @@ const Consultation = () => {
                   </svg>
                 </div>
                 <p className="text-gray-600 mb-2">ویدیو خود را آپلود کنید</p>
-                <p className="text-sm text-gray-500">حداکثر اندازه فایل: 50MB</p>
+                <p className="text-sm text-gray-500">حداکثر اندازه فایل: 50MB - فرمت‌های ویدیویی</p>
                 <input
                   type="file"
                   accept="video/*"
@@ -310,6 +468,36 @@ const Consultation = () => {
                   انتخاب فایل
                 </label>
               </div>
+              
+              {/* Display uploaded video */}
+              {formData.videos.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium text-gray-700">ویدیو انتخاب شده:</p>
+                  {formData.videos.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <span className="text-sm text-gray-600">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, videos: [] }));
+                        }}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Display video upload errors */}
+              {uploadErrors.videos && uploadErrors.videos.length > 0 && (
+                <div className="mt-2 text-red-500 text-sm">
+                  {uploadErrors.videos.map((error, index) => (
+                    <p key={index}>{error}</p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* نکات مهم */}

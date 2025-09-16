@@ -43,7 +43,12 @@ export const getPaymentById = async (req: AuthenticatedRequest, res: Response) =
       return res.status(401).json({ error: { message: 'User not authenticated' } });
     }
     
-    const payment = await getPaymentByIdService(parseInt(id), userId);
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId)) {
+      return res.status(400).json({ error: { message: 'Invalid payment ID' } });
+    }
+    
+    const payment = await getPaymentByIdService(parsedId, userId);
     
     if (!payment) {
       return res.status(404).json({ error: { message: 'Payment not found' } });

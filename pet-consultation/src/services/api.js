@@ -182,6 +182,44 @@ export const usersAPI = {
   },
 };
 
+
+
+// Media API
+export const mediaAPI = {
+  // Get media files with filters
+  getMediaFiles: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return apiRequest(`/media${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // Get media statistics
+  getMediaStats: async () => {
+    return apiRequest('/media/stats');
+  },
+
+  // Get media URL for serving
+  getMediaUrl: (mediaId) => {
+    const token = getAuthToken();
+    return `${API_BASE_URL}/media/serve/${mediaId}?token=${token}`;
+  },
+
+  // Download media file
+  downloadMedia: async (mediaId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/media/serve/${mediaId}`, {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download file');
+    }
+
+    return response;
+  },
+};
+
 // Consultations API
 export const consultationsAPI = {
   // Create new consultation
@@ -323,5 +361,40 @@ export const adminAPI = {
   getAllConsultations: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return apiRequest(`/admin/consultations?${queryString}`);
+  },
+};
+
+// Consultation API for detailed submissions
+export const consultationAPI = {
+  // Get user submissions with media files
+  getUserSubmissions: async (userId) => {
+    return apiRequest(`/consultations/user/${userId}/submissions`);
+  },
+
+  // Get detailed consultation information
+  getConsultationDetails: async (consultationId) => {
+    return apiRequest(`/consultations/${consultationId}/details`);
+  },
+
+  // Download user record as ZIP
+  downloadUserRecord: async (userId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/consultations/user/${userId}/download`, {
+      method: 'GET',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('خطا در دانلود فایل');
+    }
+
+    return response;
+  },
+
+  // Get media file URL
+  getMediaUrl: (filename) => {
+    return `${API_BASE_URL}/consultations/media/${filename}`;
   },
 };

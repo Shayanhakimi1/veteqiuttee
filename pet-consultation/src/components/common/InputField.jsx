@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 
 // کامپوننت فیلد ورودی یکپارچه
 const InputField = ({
@@ -120,6 +121,30 @@ const InputField = ({
       )}
     </div>
   );
+};
+
+InputField.propTypes = {
+  label: PropTypes.string.isRequired,
+  type: PropTypes.string,
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  onBlur: PropTypes.func,
+  placeholder: PropTypes.string,
+  error: PropTypes.string,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool,
+  className: PropTypes.string,
+  showPasswordToggle: PropTypes.bool,
+  maxLength: PropTypes.number,
+  pattern: PropTypes.string
+};
+
+InputField.defaultProps = {
+  type: 'text',
+  required: false,
+  disabled: false,
+  className: '',
+  showPasswordToggle: false
 };
 
 export default InputField;

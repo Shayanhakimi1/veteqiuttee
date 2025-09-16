@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../hooks/useApp';
+import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';

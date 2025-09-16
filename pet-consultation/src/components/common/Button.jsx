@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 // کامپوننت دکمه با انواع مختلف
 const Button = ({ 
@@ -135,6 +136,28 @@ const Button = ({
       {!loading && children}
     </button>
   );
+};
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  variant: PropTypes.oneOf(['primary', 'secondary', 'outline', 'ghost', 'success', 'warning', 'danger']),
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  loading: PropTypes.bool,
+  disabled: PropTypes.bool,
+  onClick: PropTypes.func,
+  type: PropTypes.oneOf(['button', 'submit', 'reset']),
+  className: PropTypes.string,
+  fullWidth: PropTypes.bool
+};
+
+Button.defaultProps = {
+  variant: 'primary',
+  size: 'md',
+  loading: false,
+  disabled: false,
+  type: 'button',
+  className: '',
+  fullWidth: false
 };
 
 export { Button };

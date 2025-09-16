@@ -1,0 +1,9 @@
+import{j as e}from"./index-BgTIe4Qm.js";const u=({currentStep:s=1,totalSteps:r=4,steps:n=["انتخاب پت","ثبت نام","مشاوره","پرداخت"],showLabels:o=!0,className:c=""})=>{const i=s/r*100;return e.jsxs("div",{className:`w-full ${c}`,children:[e.jsxs("div",{className:"relative",children:[e.jsx("div",{className:"w-full bg-gray-200 rounded-full h-2 mb-4",children:e.jsx("div",{className:"bg-gradient-to-r from-cyan-500 to-teal-500 h-2 rounded-full transition-all duration-500 ease-out",style:{width:`${i}%`}})}),e.jsx("div",{className:"flex justify-between absolute top-0 w-full transform -translate-y-1",children:Array.from({length:r},(m,t)=>{const a=t+1,l=a<=s,d=a===s;return e.jsxs("div",{className:"flex flex-col items-center",children:[e.jsx("div",{className:`
+                    w-4 h-4 rounded-full border-2 transition-all duration-300
+                    ${l?"bg-gradient-to-r from-primary-500 to-secondary-500 border-primary-500":"bg-white border-gray-300"}
+                    ${d?"ring-4 ring-primary-200 scale-110":""}
+                  `,children:l&&e.jsx("svg",{className:"w-2 h-2 text-white m-0.5",fill:"currentColor",viewBox:"0 0 20 20",children:e.jsx("path",{fillRule:"evenodd",d:"M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z",clipRule:"evenodd"})})}),o&&n[t]&&e.jsx("span",{className:`
+                      text-xs mt-2 text-center max-w-16 leading-tight
+                      ${l?"text-cyan-600 font-medium":"text-gray-500"}
+                      ${d?"text-cyan-700 font-semibold":""}
+                    `,children:n[t]})]},a)})})]}),e.jsxs("div",{className:"flex justify-between items-center mt-8 text-sm text-gray-600",children:[e.jsxs("span",{children:["مرحله ",s," از ",r]}),e.jsxs("span",{children:[Math.round(i),"% تکمیل شده"]})]})]})};export{u as P};

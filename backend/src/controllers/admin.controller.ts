@@ -45,7 +45,19 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
 export const getAllUsers = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { page = 1, limit = 50, search } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    
+    const parsedPage = parseInt(page as string);
+    const parsedLimit = parseInt(limit as string);
+    
+    if (isNaN(parsedPage) || parsedPage < 1) {
+      return res.status(400).json({ error: { message: 'Invalid page number' } });
+    }
+    
+    if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+      return res.status(400).json({ error: { message: 'Invalid limit (must be between 1 and 100)' } });
+    }
+    
+    const skip = (parsedPage - 1) * parsedLimit;
     
     const whereClause: any = {};
     if (search) {
@@ -264,9 +276,14 @@ export const updatePaymentStatus = async (req: AuthenticatedRequest, res: Respon
     const { paymentId } = req.params;
     const { status } = req.body;
 
+    const parsedPaymentId = parseInt(paymentId);
+    if (isNaN(parsedPaymentId)) {
+      return res.status(400).json({ error: { message: 'Invalid payment ID' } });
+    }
+
     const payment = await prisma.payment.update({
       where: {
-        id: parseInt(paymentId)
+        id: parsedPaymentId
       },
       data: {
         status,
@@ -297,9 +314,14 @@ export const updateConsultationStatus = async (req: AuthenticatedRequest, res: R
     const { consultationId } = req.params;
     const { status } = req.body;
 
+    const parsedConsultationId = parseInt(consultationId);
+    if (isNaN(parsedConsultationId)) {
+      return res.status(400).json({ error: { message: 'Invalid consultation ID' } });
+    }
+
     const consultation = await prisma.consultation.update({
       where: {
-        id: parseInt(consultationId)
+        id: parsedConsultationId
       },
       data: {
         status,

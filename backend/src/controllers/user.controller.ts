@@ -3,15 +3,17 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { createUser } from '../services/user.service';
+import { logger } from '../utils/logger';
+import { CreateUserRequest, LoginRequest, AuthResponse, ApiResponse } from '../types';
 
 const prisma = new PrismaClient();
 
 export const registerUser = async (req: Request, res: Response) => {
-  console.log("Register user request received:", req.body);
+  logger.info('Register user request received', { body: req.body });
   try {
-    console.log("Attempting to create user...");
+    logger.info('Attempting to create user');
     const { user, pet } = await createUser(req.body);
-    console.log("User created successfully:", { userId: user.id, petId: pet.id });
+    logger.info('User created successfully', { userId: user.id, petId: pet.id });
     
     // تولید JWT token
     const token = jwt.sign(
@@ -31,13 +33,15 @@ export const registerUser = async (req: Request, res: Response) => {
       pet 
     });
   } catch (error: any) {
-    console.error("Error during user registration:", error);
-    console.error("Error code:", error.code);
-    console.error("Error meta:", error.meta);
+    logger.error('Error during user registration', { 
+      error: error.message, 
+      code: error.code, 
+      meta: error.meta 
+    });
     
     // بررسی نوع خطا برای ارائه پیام مناسب
     if (error.code === 'P2002') {
-      console.log("Duplicate constraint error detected");
+      logger.warn('Duplicate constraint error detected', { target: error.meta?.target });
       if (error.meta?.target?.includes('mobile') || error.meta?.target?.includes('User')) {
         return res.status(409).json({ 
           message: "کاربری با این شماره موبایل قبلاً ثبت‌نام کرده است. لطفاً وارد شوید یا از شماره دیگری استفاده کنید." 

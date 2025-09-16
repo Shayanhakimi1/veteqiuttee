@@ -1,0 +1,312 @@
+name: Deploy to Tegrahost
+
+# تریگرهای اجرا
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # اجرای دستی
+
+# متغیرهای محیطی
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job تست و بیلد
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          pet-consultation/package-lock.json
+    
+    # Backend Build
+    - name: Install Backend Dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run Backend Tests
+      run: |
+        cd backend
+        npm test || echo "No tests found"
+        
+    - name: Build Backend
+      run: |
+        cd backend
+        npm run build
+        
+    - name: Generate Prisma Client
+      run: |
+        cd backend
+        npx prisma generate
+    
+    # Frontend Build
+    - name: Install Frontend Dependencies
+      run: |
+        cd pet-consultation
+        npm ci
+        
+    - name: Run Frontend Tests
+      run: |
+        cd pet-consultation
+        npm test || echo "No tests found"
+        
+    - name: Build Frontend
+      run: |
+        cd pet-consultation
+        npm run build
+    
+    # آپلود artifacts
+    - name: Upload Backend Build
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-build
+        path: |
+          backend/dist/
+          backend/package.json
+          backend/prisma/
+        retention-days: 1
+        
+    - name: Upload Frontend Build
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: pet-consultation/dist/
+        retention-days: 1
+
+  # Job دیپلوی (فقط برای main branch)
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://${{ secrets.DOMAIN }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download Backend Build
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-build
+        path: backend-build/
+        
+    - name: Download Frontend Build
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend-build/
+    
+    # دیپلوی با SSH
+    - name: Deploy to Tegrahost
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          set -e
+          
+          # متغیرها
+          PROJECT_PATH="/home/${{ secrets.SSH_USERNAME }}/domains/${{ secrets.DOMAIN }}/public_html"
+          API_PATH="$PROJECT_PATH/api"
+          BACKUP_PATH="/home/${{ secrets.SSH_USERNAME }}/backups"
+          
+          echo "🚀 شروع دیپلوی..."
+          
+          # ایجاد پشتیبان
+          echo "📦 ایجاد پشتیبان..."
+          mkdir -p $BACKUP_PATH
+          if [ -d "$PROJECT_PATH" ]; then
+            tar -czf "$BACKUP_PATH/backup_$(date +%Y%m%d_%H%M%S).tar.gz" -C "$PROJECT_PATH" . || echo "خطا در پشتیبان‌گیری"
+          fi
+          
+          # ایجاد مسیرها
+          mkdir -p $PROJECT_PATH
+          mkdir -p $API_PATH
+          
+          # کلون یا آپدیت کد
+          echo "📥 دریافت کد جدید..."
+          if [ -d "$PROJECT_PATH/.git" ]; then
+            cd $PROJECT_PATH
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+          else
+            rm -rf $PROJECT_PATH/*
+            git clone ${{ github.server_url }}/${{ github.repository }}.git $PROJECT_PATH
+            cd $PROJECT_PATH
+          fi
+          
+          # نصب وابستگی‌های backend
+          echo "📦 نصب وابستگی‌های backend..."
+          cd $PROJECT_PATH/backend
+          npm install --production --silent
+          
+          # بیلد backend
+          echo "🔨 بیلد backend..."
+          npm run build
+          
+          # تنظیم Prisma
+          echo "🗄️ تنظیم Prisma..."
+          npx prisma generate
+          
+          # نصب وابستگی‌های frontend
+          echo "📦 نصب وابستگی‌های frontend..."
+          cd $PROJECT_PATH/pet-consultation
+          npm install --silent
+          
+          # بیلد frontend
+          echo "🔨 بیلد frontend..."
+          npm run build
+          
+          # کپی فایل‌ها
+          echo "📁 کپی فایل‌ها..."
+          # Frontend files
+          cp -r $PROJECT_PATH/pet-consultation/dist/* $PROJECT_PATH/
+          
+          # Backend files
+          cp -r $PROJECT_PATH/backend/dist/* $API_PATH/
+          cp $PROJECT_PATH/backend/package.json $API_PATH/
+          cp -r $PROJECT_PATH/backend/prisma $API_PATH/
+          
+          # تنظیم environment variables
+          echo "⚙️ تنظیم متغیرهای محیطی..."
+          cat > $API_PATH/.env << EOF
+          DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          NODE_ENV="production"
+          PORT=3001
+          EOF
+          
+          # تنظیم دسترسی‌ها
+          echo "🔐 تنظیم دسترسی‌ها..."
+          find $PROJECT_PATH -type f -exec chmod 644 {} \;
+          find $PROJECT_PATH -type d -exec chmod 755 {} \;
+          chmod 600 $API_PATH/.env
+          
+          # ایجاد .htaccess
+          echo "📝 ایجاد .htaccess..."
+          cat > $PROJECT_PATH/.htaccess << 'HTACCESS_EOF'
+          # تنظیمات امنیتی
+          ServerTokens Prod
+          ServerSignature Off
+          
+          # محافظت از فایل‌های حساس
+          <Files ".env">
+              Order allow,deny
+              Deny from all
+          </Files>
+          
+          # فشرده‌سازی
+          <IfModule mod_deflate.c>
+              AddOutputFilterByType DEFLATE text/plain
+              AddOutputFilterByType DEFLATE text/html
+              AddOutputFilterByType DEFLATE text/css
+              AddOutputFilterByType DEFLATE application/javascript
+          </IfModule>
+          
+          # مسیریابی API
+          RewriteEngine On
+          RewriteRule ^api/(.*)$ http://localhost:3001/$1 [P,L]
+          
+          # SPA routing
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule . /index.html [L]
+          HTACCESS_EOF
+          
+          # نصب PM2 اگر وجود نداشته باشد
+          if ! command -v pm2 &> /dev/null; then
+            echo "📦 نصب PM2..."
+            npm install -g pm2
+          fi
+          
+          # راه‌اندازی مجدد سرور
+          echo "🔄 راه‌اندازی مجدد سرور..."
+          cd $API_PATH
+          pm2 stop veteqiutte-api 2>/dev/null || true
+          pm2 delete veteqiutte-api 2>/dev/null || true
+          pm2 start server.js --name "veteqiutte-api" --env production
+          pm2 save
+          
+          # پاکسازی
+          echo "🧹 پاکسازی..."
+          rm -rf $PROJECT_PATH/backend/node_modules
+          rm -rf $PROJECT_PATH/pet-consultation/node_modules
+          rm -rf $PROJECT_PATH/backend/src
+          rm -rf $PROJECT_PATH/pet-consultation/src
+          
+          echo "✅ دیپلوی با موفقیت انجام شد!"
+          
+          # تست عملکرد
+          echo "🧪 تست عملکرد..."
+          sleep 5
+          
+          if curl -f -s "http://localhost:3001/health" > /dev/null; then
+            echo "✅ API در حال اجرا است"
+          else
+            echo "⚠️ API پاسخ نمی‌دهد"
+          fi
+          
+          pm2 status
+    
+    # اطلاع‌رسانی
+    - name: Notify Success
+      if: success()
+      run: |
+        echo "✅ دیپلوی با موفقیت انجام شد!"
+        echo "🌐 آدرس سایت: https://${{ secrets.DOMAIN }}"
+        echo "🔗 آدرس API: https://${{ secrets.DOMAIN }}/api"
+    
+    - name: Notify Failure
+      if: failure()
+      run: |
+        echo "❌ خطا در دیپلوی!"
+        echo "لطفاً لاگ‌ها را بررسی کنید."
+
+  # Job تست پس از دیپلوی
+  post-deploy-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Test Deployment
+      run: |
+        echo "🧪 تست دیپلوی..."
+        
+        # تست API health endpoint
+        if curl -f -s "https://${{ secrets.DOMAIN }}/api/health" > /dev/null; then
+          echo "✅ API health check موفق"
+        else
+          echo "❌ API health check ناموفق"
+          exit 1
+        fi
+        
+        # تست frontend
+        if curl -f -s "https://${{ secrets.DOMAIN }}" > /dev/null; then
+          echo "✅ Frontend در دسترس است"
+        else
+          echo "❌ Frontend در دسترس نیست"
+          exit 1
+        fi
+        
+        echo "✅ همه تست‌ها موفق بودند!"

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { adminAPI } from '../services/api';
+import { adminAPI, consultationAPI } from '../services/api';
 import { logger } from '../utils/logger';
 import Button from '../components/common/Button';
 import InputField from '../components/common/InputField';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import UserSubmissionsModal from '../components/UserSubmissionsModal';
+import BulkDownloadModal from '../components/BulkDownloadModal';
+import UserCard from '../components/UserCard';
+import MediaTab from '../components/admin/MediaTab';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -15,6 +19,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUserForSubmissions, setSelectedUserForSubmissions] = useState(null);
+  const [showBulkDownload, setShowBulkDownload] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [activeTab, setActiveTab] = useState('users');
@@ -63,6 +70,25 @@ const AdminDashboard = () => {
       setSampleData();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadUser = async (user) => {
+    try {
+      const response = await consultationAPI.downloadUserRecord(user.id);
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${user.fullName}_${user.mobileNumber}_records.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setError('خطا در دانلود فایل: ' + error.message);
     }
   };
 
@@ -304,6 +330,16 @@ const AdminDashboard = () => {
               >
                 مدیریت مشاوره‌ها
               </button>
+              <button
+                onClick={() => setActiveTab('media')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'media'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                مدیریت رسانه‌ها
+              </button>
             </nav>
           </div>
 
@@ -332,82 +368,150 @@ const AdminDashboard = () => {
                     <option value="no-payment">بدون پرداخت</option>
                   </select>
                 </div>
+                <div className="flex items-center space-x-3 space-x-reverse">
+                      {/* View Mode Toggle */}
+                      <div className="flex rounded-md shadow-sm">
+                        <button
+                          onClick={() => setViewMode('table')}
+                          className={`px-3 py-2 text-sm font-medium rounded-r-md border ${
+                            viewMode === 'table'
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18m-9 8h9" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setViewMode('cards')}
+                          className={`px-3 py-2 text-sm font-medium rounded-l-md border-t border-b border-l ${
+                            viewMode === 'cards'
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => setShowBulkDownload(true)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2 space-x-reverse"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>دانلود گروهی</span>
+                      </button>
+                    </div>
               </div>
 
-              {/* Users Table */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        کاربر
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        شماره موبایل
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        وضعیت پرداخت
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        تعداد مشاوره‌ها
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        تاریخ عضویت
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        عملیات
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.map((user) => {
-                      const paymentStatus = getUserPaymentStatus(user.id);
-                      const userConsultations = getUserConsultations(user.id);
-                      return (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                  <span className="text-sm font-medium text-blue-600">
-                                    {user.fullName.charAt(0)}
-                                  </span>
+              {/* Users Display */}
+              {viewMode === 'table' ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          کاربر
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          شماره موبایل
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          وضعیت پرداخت
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          تعداد مشاوره‌ها
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          تاریخ عضویت
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          عملیات
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredUsers.map((user) => {
+                        const paymentStatus = getUserPaymentStatus(user.id);
+                        const userConsultations = getUserConsultations(user.id);
+                        return (
+                          <tr key={user.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span className="text-sm font-medium text-blue-600">
+                                      {user.fullName.charAt(0)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mr-4">
+                                  <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
+                                  <div className="text-sm text-gray-500">کاربر #{user.id}</div>
                                 </div>
                               </div>
-                              <div className="mr-4">
-                                <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
-                                <div className="text-sm text-gray-500">کاربر #{user.id}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {user.mobile}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`text-sm font-medium ${paymentStatus.color}`}>
-                              {paymentStatus.text}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {userConsultations.length}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(user.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => setSelectedUser(user)}
-                              className="text-blue-600 hover:text-blue-900 ml-4"
-                            >
-                              مشاهده جزئیات
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {user.mobile}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`text-sm font-medium ${paymentStatus.color}`}>
+                                {paymentStatus.text}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {userConsultations.length}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatDate(user.createdAt)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() => setSelectedUser(user)}
+                                className="text-blue-600 hover:text-blue-900 ml-4"
+                              >
+                                مشاهده جزئیات
+                              </button>
+                              <button
+                                onClick={() => setSelectedUserForSubmissions(user)}
+                                className="text-green-600 hover:text-green-900 ml-4"
+                              >
+                                اطلاعات جامع حیوان
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredUsers.map((user) => {
+                    const paymentStatus = getUserPaymentStatus(user.id);
+                    const userConsultations = getUserConsultations(user.id);
+                    return (
+                      <UserCard
+                        key={user.id}
+                        user={{
+                          ...user,
+                          paymentStatus,
+                          consultationsCount: userConsultations.length
+                        }}
+                        onViewDetails={setSelectedUser}
+                        onViewSubmissions={setSelectedUserForSubmissions}
+                        onDownload={handleDownloadUser}
+                        formatDate={formatDate}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -550,6 +654,11 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* Media Tab */}
+          {activeTab === 'media' && (
+            <MediaTab />
+          )}
         </div>
       </div>
 
@@ -663,6 +772,20 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* User Submissions Modal */}
+      <UserSubmissionsModal
+        user={selectedUserForSubmissions}
+        isOpen={!!selectedUserForSubmissions}
+        onClose={() => setSelectedUserForSubmissions(null)}
+      />
+
+      {/* Bulk Download Modal */}
+      <BulkDownloadModal
+        isOpen={showBulkDownload}
+        onClose={() => setShowBulkDownload(false)}
+        users={filteredUsers}
+      />
 
       {error && (
         <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
